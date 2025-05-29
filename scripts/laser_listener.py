@@ -4,18 +4,21 @@ import rospy
 from sensor_msgs.msg import LaserScan
 import math
 import numpy as np
+import copy
 
 class HybridFilteredLaserListener:
     def __init__(self):
         rospy.init_node('hybrid_filtered_laser_listener_node', anonymous=True)
         
-        self.window_size = 5  # Размер окна для обоих фильтров (нечетное)
+        self.window_size = 5  # Размер окна для фильтрации
         if self.window_size % 2 == 0:
             self.window_size += 1
         
-        self.buffer = []  # Буфер для хранения последних отфильтрованных сканов
+        self.buffer = []  # Буфер последних сканов
         self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
-        rospy.loginfo("Узел запущен: подписка на /scan с фильтрацией, скользящим средним и медианным фильтром")
+        self.scan_pub = rospy.Publisher("/scan_filtered", LaserScan, queue_size=10)
+
+        rospy.loginfo("Узел запущен: подписка на /scan, публикация в /scan_filtered")
 
     def filter_scan(self, scan):
         filtered = []
@@ -57,22 +60,23 @@ class HybridFilteredLaserListener:
             self.buffer.pop(0)
 
         if len(self.buffer) == self.window_size:
-            # Сначала скользящее среднее
             avg_filtered = self.moving_average(self.buffer)
-            # Затем медианный фильтр по результатам скользящего среднего
-            temp_buffer = self.buffer[1:-1]  # берём 3 центральных среза для медианного фильтра
-            temp_buffer = [avg_filtered] + temp_buffer
-            # Обновляем буфер временно для медианы
+            temp_buffer = [avg_filtered] + self.buffer[1:-1]
             median_filtered = self.median_filter(temp_buffer)
         else:
-            median_filtered = filtered_scan  # Пока мало данных
+            median_filtered = filtered_scan
+
+        # Публикация в /scan_filtered
+        filtered_msg = copy.deepcopy(msg)
+        filtered_msg.ranges = median_filtered
+        filtered_msg.header.stamp = rospy.Time.now()
+        self.scan_pub.publish(filtered_msg)
 
         valid_vals = [v for v in median_filtered if not math.isnan(v)]
         if valid_vals:
-            rospy.loginfo("Гибридный фильтр: валидных значений %d из %d, мин=%.2f, макс=%.2f, среднее=%.2f",
-                          len(valid_vals), len(median_filtered), min(valid_vals), max(valid_vals), sum(valid_vals)/len(valid_vals))
+            rospy.loginfo("Публикация в /scan_filtered: %d валидных значений", len(valid_vals))
         else:
-            rospy.logwarn("Гибридный фильтр: нет валидных данных!")
+            rospy.logwarn("Публикация в /scan_filtered: нет валидных данных!")
 
 def main():
     node = HybridFilteredLaserListener()
