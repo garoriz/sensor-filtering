@@ -81,6 +81,8 @@ class HybridFilteredLaserListener:
 def main():
     node = HybridFilteredLaserListener()
     rospy.spin()
+    
+# Частота /scan_filtered немного меньше, так как перед публикацией в /scan_filtered происходят множество вычислений
 
 if __name__ == '__main__':
     main()
