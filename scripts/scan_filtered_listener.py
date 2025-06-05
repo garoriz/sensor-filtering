@@ -5,42 +5,58 @@ from sensor_msgs.msg import LaserScan
 import math
 import numpy as np
 
-class WallDistanceEstimator:
+APPROACHING = "APPROACHING"
+RECEDING = "RECEDING"
+STABLE = "STABLE"
+
+class WallMotionDetector:
     def __init__(self):
-        rospy.init_node('wall_distance_estimator', anonymous=True)
+        rospy.init_node('wall_motion_detector')
+        self.last_distance = None
+        self.state = STABLE
+        self.delta_threshold = 0.01  # 1 см
         rospy.Subscriber('/scan_filtered', LaserScan, self.scan_callback)
-        rospy.loginfo("Узел wall_distance_estimator подписан на /scan_filtered")
+        rospy.loginfo("Узел wall_motion_detector запущен")
         rospy.spin()
 
     def scan_callback(self, scan: LaserScan):
-        angle_min = scan.angle_min
         angle_increment = scan.angle_increment
-        num_ranges = len(scan.ranges)
+        ranges = scan.ranges
+        num_ranges = len(ranges)
 
-        # Центральный индекс
         center_index = num_ranges // 2
-
-        # Сектор ±2.5° = ±0.0436 рад
         half_angle_range = math.radians(2.5)
         sector_half_count = int(half_angle_range / angle_increment)
 
-        # Границы сектора
         start_index = max(center_index - sector_half_count, 0)
         end_index = min(center_index + sector_half_count + 1, num_ranges)
 
-        # Отбираем валидные значения
-        sector_ranges = scan.ranges[start_index:end_index]
-        valid_ranges = [r for r in sector_ranges if scan.range_min <= r <= scan.range_max and not math.isnan(r) and not math.isinf(r)]
+        sector = ranges[start_index:end_index]
+        valid = [r for r in sector if scan.range_min <= r <= scan.range_max and not math.isnan(r) and not math.isinf(r)]
 
-        if valid_ranges:
-            distance = float(np.mean(valid_ranges))  # можно заменить на median
-            rospy.loginfo("Расстояние до стены в секторе ±2.5°: %.3f м (на %d лучах)", distance, len(valid_ranges))
-        else:
-            rospy.logwarn("Нет валидных данных в центральном секторе")
+        if not valid:
+            rospy.logwarn("Нет валидных измерений в секторе")
+            return
+
+        current_distance = float(np.mean(valid))
+
+        if self.last_distance is not None:
+            delta = current_distance - self.last_distance
+
+            if abs(delta) < self.delta_threshold:
+                self.state = STABLE
+            elif delta < 0:
+                self.state = APPROACHING
+            else:
+                self.state = RECEDING
+
+            rospy.loginfo("Δ = %.4f м → состояние: %s (текущая дистанция: %.3f м)", delta, self.state, current_distance)
+
+        self.last_distance = current_distance
 
 if __name__ == '__main__':
     try:
-        WallDistanceEstimator()
+        WallMotionDetector()
     except rospy.ROSInterruptException:
         pass
 
