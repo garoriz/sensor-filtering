@@ -14,7 +14,7 @@ class WallMotionDetector:
         rospy.init_node('wall_motion_detector')
         self.last_distance = None
         self.state = STABLE
-        self.delta_threshold = 0.01  # 1 см
+        self.delta_threshold = 0.03
         rospy.Subscriber('/scan_filtered', LaserScan, self.scan_callback)
         rospy.loginfo("Узел wall_motion_detector запущен")
         rospy.spin()
