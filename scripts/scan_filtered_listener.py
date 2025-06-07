@@ -2,6 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Float32
 import math
 import numpy as np
 
@@ -12,10 +13,15 @@ STABLE = "STABLE"
 class WallMotionDetector:
     def __init__(self):
         rospy.init_node('wall_motion_detector')
+
+        self.distance_pub = rospy.Publisher('/wall_distance', Float32, queue_size=10)
+
+        rospy.Subscriber('/scan_filtered', LaserScan, self.scan_callback)
+
         self.last_distance = None
         self.state = STABLE
-        self.delta_threshold = 0.03
-        rospy.Subscriber('/scan_filtered', LaserScan, self.scan_callback)
+        self.delta_threshold = 0.01  # 1 см
+
         rospy.loginfo("Узел wall_motion_detector запущен")
         rospy.spin()
 
@@ -40,6 +46,9 @@ class WallMotionDetector:
 
         current_distance = float(np.mean(valid))
 
+        # Публикация расстояния
+        self.distance_pub.publish(Float32(data=current_distance))
+
         if self.last_distance is not None:
             delta = current_distance - self.last_distance
 
@@ -50,7 +59,7 @@ class WallMotionDetector:
             else:
                 self.state = RECEDING
 
-            rospy.loginfo("Δ = %.4f м → состояние: %s (текущая дистанция: %.3f м)", delta, self.state, current_distance)
+            rospy.loginfo("Δ = %.4f м → состояние: %s (дистанция: %.3f м)", delta, self.state, current_distance)
 
         self.last_distance = current_distance
 
