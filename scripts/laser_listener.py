@@ -10,11 +10,11 @@ class HybridFilteredLaserListener:
     def __init__(self):
         rospy.init_node('hybrid_filtered_laser_listener_node', anonymous=True)
         
-        self.window_size = 5  # Размер окна для фильтрации
+        self.window_size = 5
         if self.window_size % 2 == 0:
             self.window_size += 1
         
-        self.buffer = []  # Буфер последних сканов
+        self.buffer = []
         self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
         self.scan_pub = rospy.Publisher("/scan_filtered", LaserScan, queue_size=10)
 
@@ -66,17 +66,10 @@ class HybridFilteredLaserListener:
         else:
             median_filtered = filtered_scan
 
-        # Публикация в /scan_filtered
         filtered_msg = copy.deepcopy(msg)
         filtered_msg.ranges = median_filtered
         filtered_msg.header.stamp = rospy.Time.now()
         self.scan_pub.publish(filtered_msg)
-
-        valid_vals = [v for v in median_filtered if not math.isnan(v)]
-        if valid_vals:
-            rospy.loginfo("Публикация в /scan_filtered: %d валидных значений", len(valid_vals))
-        else:
-            rospy.logwarn("Публикация в /scan_filtered: нет валидных данных!")
 
 def main():
     node = HybridFilteredLaserListener()
