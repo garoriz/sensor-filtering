@@ -11,3 +11,5 @@
 1. roslaunch sensor_filtering my_world.launch
 2. rosrun sensor_filtering laser_listener.py
 3. rosrun sensor_filtering scan_filtered_listener.py
+
+Также есть демо (см. demo.webm)
