@@ -1,6 +1,6 @@
 Задание 1 см. 
-  в worlds/my_world.world - там мир
-  в launch/my_world.launch - там робот
+  в worlds/my_world.world (там мир) и
+  в launch/my_world.launch (там робот)
 
 Задание 2 см. в scripts/laser_listener.py
 
