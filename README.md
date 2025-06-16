@@ -1,1 +1,7 @@
-Задание 1 см. в worlds/my_world.world
+Задание 1 см. 
+  в worlds/my_world.world - там мир
+  в launch/my_world.launch - там робот
+
+Задание 2 см. в scripts/laser_listener.py
+
+Задание 3 см. в scripts/scan_filtered_listener.py (c a по d, e - не сделано)
