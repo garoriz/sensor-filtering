@@ -15,11 +15,14 @@ class HybridFilteredLaserListener:
             self.window_size += 1
         
         self.buffer = []
+        # Подписка на топик /scan
         self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
+        # Публикация результирующих данных в топик /scan_filtered
         self.scan_pub = rospy.Publisher("/scan_filtered", LaserScan, queue_size=10)
 
         rospy.loginfo("Узел запущен: подписка на /scan, публикация в /scan_filtered")
 
+    # Отсеивание некорректных значений (NaN, Inf, значения вне диапазона range_min, range_max)
     def filter_scan(self, scan):
         filtered = []
         for r in scan.ranges:
@@ -31,6 +34,7 @@ class HybridFilteredLaserListener:
                 filtered.append(r)
         return filtered
 
+    # Применение скользящего среднего (для сглаживания шума)
     def moving_average(self, data_buffers):
         length = len(data_buffers[0])
         averaged = []
@@ -41,7 +45,7 @@ class HybridFilteredLaserListener:
             else:
                 averaged.append(float('nan'))
         return averaged
-
+    # Применение медианного фильтра 
     def median_filter(self, data_buffers):
         length = len(data_buffers[0])
         medianed = []

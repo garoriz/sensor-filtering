@@ -14,9 +14,11 @@ class WallMotionDetector:
     def __init__(self):
         rospy.init_node('wall_motion_detector')
 
+	# Публикация результатов в топики
         self.distance_pub = rospy.Publisher('/wall_distance', Float32, queue_size=10)
         self.motion_pub = rospy.Publisher('/wall_motion', String, queue_size=10)
 
+        # Подписка на топик /scan_filtered
         rospy.Subscriber('/scan_filtered', LaserScan, self.scan_callback)
 
         self.last_distance = None
@@ -25,6 +27,7 @@ class WallMotionDetector:
 
         rospy.spin()
 
+    # Вычисление расстояния до стены
     def scan_callback(self, scan: LaserScan):
         angle_increment = scan.angle_increment
         ranges = scan.ranges
@@ -47,6 +50,7 @@ class WallMotionDetector:
 
         self.distance_pub.publish(Float32(data=current_distance))
 
+	# Вычисление направления движения
         if self.last_distance is not None:
             delta = current_distance - self.last_distance
 
